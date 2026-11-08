@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:game/screen/genre_selection_screen.dart';
 import 'package:image_picker/image_picker.dart';
 
 class PhotoUploadScreen extends StatefulWidget {
@@ -88,15 +89,15 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
             // ─────────────────────────────
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 65),
+                    const SizedBox(height: 20),
 
-                    // Heading
+                    // ─────────────────────────
+                    // HEADING
+                    // ─────────────────────────
                     const Text(
                       'Turn a photo into\na playable world.',
                       style: TextStyle(
@@ -107,20 +108,7 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 14),
-
-                    // Subtitle
-                    Text(
-                      'Upload a photo and Imagica will use it as inspiration for your mini game.',
-                      style: TextStyle(
-                        fontSize: 17,
-                        height: 1.45,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-
-                    const SizedBox(height: 38),
+                    const SizedBox(height: 25),
 
                     // ─────────────────────────
                     // IMAGE UPLOAD AREA
@@ -139,22 +127,29 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
                           ),
                         ),
                         child: _selectedImage == null
-                            ? _EmptyUploadArea()
-                            : _SelectedImage(image: _selectedImage!),
+                            ? const _EmptyUploadArea()
+                            : _SelectedImage(
+                                image: _selectedImage!,
+                                onRemove: () {
+                                  setState(() {
+                                    _selectedImage = null;
+                                  });
+                                },
+                              ),
                       ),
                     ),
 
                     const SizedBox(height: 18),
 
                     // ─────────────────────────
-                    // BUTTONS
+                    // GALLERY + CAMERA
                     // ─────────────────────────
                     Row(
                       children: [
                         Expanded(
                           child: _ActionButton(
                             icon: Icons.photo_library_outlined,
-                            text: 'Choose Photo',
+                            text: 'Gallery',
                             onPressed: _pickFromGallery,
                           ),
                         ),
@@ -171,17 +166,51 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
                       ],
                     ),
 
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 16),
 
-                    // Bottom hint
-                    Center(
-                      child: Text(
-                        'Best results: clear photos with a visible subject or environment',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade500,
-                          height: 1.4,
+                    // ─────────────────────────
+                    // CONTINUE BUTTON
+                    // ─────────────────────────
+                    SizedBox(
+                      width: double.infinity,
+                      height: 58,
+                      child: OutlinedButton(
+                        onPressed: _selectedImage == null
+                            ? null
+                            : () {
+                                // Genre selection will be connected here
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => GenreSelectionScreen(
+                                      image: _selectedImage!,
+                                    ),
+                                  ),
+                                );
+                              },
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: _selectedImage == null
+                              ? Colors.white
+                              : Colors.blue,
+                          foregroundColor: _selectedImage == null
+                              ? Colors.grey.shade400
+                              : Colors.white,
+                          side: BorderSide(
+                            color: _selectedImage == null
+                                ? Colors.grey.shade200
+                                : Colors.blue,
+                            width: 1.2,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text(
+                          'Continue',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ),
@@ -203,6 +232,8 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
 // ─────────────────────────────────────
 
 class _EmptyUploadArea extends StatelessWidget {
+  const _EmptyUploadArea();
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -238,10 +269,7 @@ class _EmptyUploadArea extends StatelessWidget {
 
           Text(
             'or choose an image from your device',
-            style: TextStyle(
-              fontSize: 15,
-              color: Colors.grey.shade600,
-            ),
+            style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
           ),
         ],
       ),
@@ -255,10 +283,9 @@ class _EmptyUploadArea extends StatelessWidget {
 
 class _SelectedImage extends StatelessWidget {
   final File image;
+  final VoidCallback onRemove;
 
-  const _SelectedImage({
-    required this.image,
-  });
+  const _SelectedImage({required this.image, required this.onRemove});
 
   @override
   Widget build(BuildContext context) {
@@ -267,42 +294,27 @@ class _SelectedImage extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Image.file(
-            image,
-            fit: BoxFit.cover,
-          ),
+          // Image
+          Image.file(image, fit: BoxFit.cover),
 
-          // Dark overlay
-          Container(
-            color: Colors.black.withOpacity(0.12),
-          ),
-
-          // Change image button
-          Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 18,
-                vertical: 11,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.92),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.edit_outlined,
-                    size: 18,
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    'Change Photo',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+          // Cross button
+          Positioned(
+            top: 12,
+            right: 12,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.9),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.close_rounded,
+                  size: 22,
+                  color: Colors.black,
+                ),
               ),
             ),
           ),
@@ -336,10 +348,7 @@ class _ActionButton extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           foregroundColor: Colors.black,
           backgroundColor: Colors.white,
-          side: BorderSide(
-            color: Colors.grey.shade200,
-            width: 1.2,
-          ),
+          side: BorderSide(color: Colors.grey.shade200, width: 1.2),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
@@ -347,17 +356,11 @@ class _ActionButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 19,
-            ),
+            Icon(icon, size: 19),
             const SizedBox(width: 8),
             Text(
               text,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
           ],
         ),
