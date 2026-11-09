@@ -1,26 +1,23 @@
-
-import 'package:game/screen/home_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:game/screen/home_screen.dart';
 
-
-void main() {
-  runApp(const Imagica());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+await dotenv.load(fileName: ".env");
+  runApp(
+    const MyApp(),
+  );
 }
 
-class Imagica extends StatelessWidget {
-  const Imagica({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Imagica',
-      theme: ThemeData(
-        useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFFF7F7F5),
-        fontFamily: 'Arial',
-      ),
-      home: const HomeScreen(),
+      home:HomeScreen(),
     );
   }
 }

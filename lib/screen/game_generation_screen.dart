@@ -1,279 +1,269 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:game/game/game_screen.dart';
+import 'package:game/services/groq_service.dart';
+
+import '../models/game_spec.dart';
 
 class GameGenerationScreen extends StatefulWidget {
   final File image;
   final String genre;
+  final String mood;
+  final String difficulty;
+  final String? title;
+  final String? description;
 
   const GameGenerationScreen({
     super.key,
     required this.image,
     required this.genre,
+    required this.mood,
+    required this.difficulty,
+    this.title,
+    this.description,
   });
 
   @override
-  State<GameGenerationScreen> createState() =>
-      _GameGenerationScreenState();
+  State<GameGenerationScreen> createState() => _GameGenerationScreenState();
 }
 
-class _GameGenerationScreenState
-    extends State<GameGenerationScreen> {
-  int _currentStep = 0;
+class _GameGenerationScreenState extends State<GameGenerationScreen> {
+  final GroqGameService _groqGameService = GroqGameService();
 
-  final List<String> _steps = [
-    'Analyzing your photo',
-    'Building the world',
-    'Creating gameplay',
-    'Adding your genre',
-  ];
+  GameSpec? _gameSpec;
 
-  Timer? _timer;
+  bool _isGenerating = false;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
 
-    _startGeneration();
+    _generateGame();
   }
 
-  void _startGeneration() {
-    _timer = Timer.periodic(
-      const Duration(seconds: 2),
-      (timer) {
-        if (!mounted) return;
+  Future<void> _generateGame() async {
+    setState(() {
+      _isGenerating = true;
+      _error = null;
+    });
 
-        if (_currentStep < _steps.length - 1) {
-          setState(() {
-            _currentStep++;
-          });
-        } else {
-          timer.cancel();
+    try {
+      final gameSpec = await _groqGameService.generateGame(
+        image: widget.image,
+        genre: widget.genre,
+        mood: widget.mood,
+        difficulty: widget.difficulty,
+        title: widget.title,
+        description: widget.description,
+      );
+      print('Game title: ${gameSpec.title}');
+      print('Genre: ${gameSpec.genre}');
+      print('Mood: ${gameSpec.mood}');
+      print('Difficulty: ${gameSpec.difficulty}');
 
-          // AI generation will be connected here later.
-        }
-      },
-    );
-  }
+      print('World: ${gameSpec.world.theme}');
+      print('Objective: ${gameSpec.objective.description}');
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
+      for (final object in gameSpec.objects) {
+        print(
+          'Object: ${object.name}, '
+          'Type: ${object.type}, '
+          'Count: ${object.count}',
+        );
+      }
+      if (!mounted) return;
+
+      setState(() {
+        _gameSpec = gameSpec;
+        _isGenerating = false;
+      });
+
+      debugPrint('Game generated successfully!');
+      debugPrint('Title: ${gameSpec.title}');
+      debugPrint('Genre: ${gameSpec.genre}');
+      debugPrint('Objective: ${gameSpec.objective.description}');
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isGenerating = false;
+        _error = e.toString();
+      });
+
+      debugPrint('Game generation failed: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(
-            children: [
-              const SizedBox(height: 25),
-
-              // Image preview
-              ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 230,
-                  child: Image.file(
-                    widget.image,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              const Text(
-                'Creating your game.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 31,
-                  height: 1.15,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.black,
-                ),
-              ),
-
-              const SizedBox(height: 5),
-
-              Text(
-                'Turning your photo into a ${widget.genre.toLowerCase()} world.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-
-              const SizedBox(height: 22),
-
-              // Progress steps
-              Container(
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          'Creating your game',
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700),
+        ),
+        iconTheme: const IconThemeData(color: Colors.black),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: Image.file(
+                widget.image,
+                height: 220,
                 width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: Colors.grey.shade200,
-                    width: 1.2,
+                fit: BoxFit.cover,
+              ),
+            ),
+
+            const SizedBox(height: 28),
+
+            const Text(
+              'Creating your game.',
+              style: TextStyle(
+                fontSize: 30,
+                fontWeight: FontWeight.w800,
+                color: Colors.black,
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            Text(
+              'Turning your ${widget.genre.toLowerCase()} idea '
+              'into a playable world.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
+            ),
+
+            const SizedBox(height: 35),
+
+            if (_isGenerating)
+              const Column(
+                children: [
+                  CircularProgressIndicator(color: Colors.black),
+                  SizedBox(height: 18),
+                  Text(
+                    'Generating game specification...',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                   ),
-                ),
-                child: Column(
-                  children: List.generate(
-                    _steps.length,
-                    (index) {
-                      return _ProgressStep(
-                        title: _steps[index],
-                        status: index < _currentStep
-                            ? StepStatus.completed
-                            : index == _currentStep
-                                ? StepStatus.active
-                                : StepStatus.waiting,
-                        isLast: index == _steps.length - 1,
-                      );
-                    },
-                  ),
-                ),
+                ],
               ),
 
-              const Spacer(),
-
-              if (_currentStep == _steps.length - 1)
-                SizedBox(
-                  width: double.infinity,
-                  height: 58,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // Generated game screen will be connected here.
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
+            if (_gameSpec != null)
+              Expanded(
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.check_circle,
+                      size: 52,
+                      color: Colors.black,
                     ),
-                    child: const Text(
-                      'Play Game',
+
+                    const SizedBox(height: 14),
+
+                    const Text(
+                      'Game created!',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 20,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                  ),
-                ),
 
-              const SizedBox(height: 25),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
+                    const SizedBox(height: 8),
 
-enum StepStatus {
-  completed,
-  active,
-  waiting,
-}
+                    Text(
+                      _gameSpec!.title,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
 
-class _ProgressStep extends StatelessWidget {
-  final String title;
-  final StepStatus status;
-  final bool isLast;
+                    const Spacer(),
 
-  const _ProgressStep({
-    required this.title,
-    required this.status,
-    required this.isLast,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final bool completed = status == StepStatus.completed;
-    final bool active = status == StepStatus.active;
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Column(
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: completed || active
-                    ? Colors.black
-                    : Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: completed || active
-                      ? Colors.black
-                      : Colors.grey.shade300,
-                  width: 1.5,
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => GameScreen(gameSpec: _gameSpec!),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text(
+                          'Play Game',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              child: completed
-                  ? const Icon(
-                      Icons.check_rounded,
-                      color: Colors.white,
-                      size: 19,
-                    )
-                  : active
-                      ? const SizedBox(
-                          width: 15,
-                          height: 15,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                          ),
-                        )
-                      : null,
-            ),
 
-            if (!isLast)
-              Container(
-                width: 1.5,
-                height: 38,
-                color: completed
-                    ? Colors.black
-                    : Colors.grey.shade200,
+            if (_error != null)
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 45,
+                      color: Colors.black,
+                    ),
+
+                    const SizedBox(height: 15),
+
+                    const Text(
+                      'Something went wrong',
+                      style: TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    OutlinedButton(
+                      onPressed: _generateGame,
+                      child: const Text('Try Again'),
+                    ),
+                  ],
+                ),
               ),
           ],
         ),
-
-        const SizedBox(width: 15),
-
-        Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Text(
-            title,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight:
-                  active || completed
-                      ? FontWeight.w600
-                      : FontWeight.w500,
-              color: active || completed
-                  ? Colors.black
-                  : Colors.grey.shade400,
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

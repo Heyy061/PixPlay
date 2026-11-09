@@ -272,6 +272,10 @@ class _GameCustomizationScreenState extends State<GameCustomizationScreen> {
                               builder: (context) => GameGenerationScreen(
                                 image: widget.image,
                                 genre: widget.genre,
+                                mood: _selectedMood,
+                                difficulty: _selectedDifficulty,
+                                title: _titleController.text,
+                                description: _descriptionController.text,
                               ),
                             ),
                           );
