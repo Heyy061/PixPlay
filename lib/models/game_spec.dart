@@ -11,6 +11,8 @@ class GameSpec {
   final WinCondition winCondition;
   final LoseCondition loseCondition;
 
+  
+
   GameSpec({
     required this.title,
     required this.genre,

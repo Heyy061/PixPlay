@@ -9,12 +9,16 @@ import '../models/game_spec.dart';
 
 class GeneratedGame extends FlameGame with HasCollisionDetection {
   final GameSpec gameSpec;
-
+  late TextComponent timerText;
   late TextComponent scoreText;
 
   int score = 0;
   bool gameWon = false;
   bool gameOver = false;
+
+  double remainingTime = 0;
+  int collectedCount = 0;
+  int totalCollectibles = 0;
 
   GeneratedGame({required this.gameSpec});
 
@@ -89,26 +93,43 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
       ),
     );
   }
+
+  ///////////////////////////////////////
+  ///UPDATE
+  @override
+  void update(double dt) {
+    super.update(dt);
+
+    if (gameOver || gameWon) return;
+
+    if (gameSpec.rules.timeLimit != null) {
+      remainingTime -= dt;
+
+      if (remainingTime < 0) {
+        remainingTime = 0;
+      }
+
+      timerText.text = 'Time: ${remainingTime.ceil()}';
+    }
+  }
+
   /////////////////////////////////////
   void showGameOverMessage() {
-  add(
-    TextComponent(
-      text: 'GAME OVER',
-      position: Vector2(
-        size.x / 2,
-        size.y / 2,
-      ),
-      anchor: Anchor.center,
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          color: Colors.red,
-          fontSize: 42,
-          fontWeight: FontWeight.bold,
+    add(
+      TextComponent(
+        text: 'GAME OVER',
+        position: Vector2(size.x / 2, size.y / 2),
+        anchor: Anchor.center,
+        textRenderer: TextPaint(
+          style: const TextStyle(
+            color: Colors.red,
+            fontSize: 42,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   // =========================
   // GAME LOAD
@@ -117,6 +138,13 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    if (gameSpec.rules.timeLimit != null) {
+      remainingTime = gameSpec.rules.timeLimit!.toDouble();
+    }
+    print(
+      'OBJECTIVE: ${gameSpec.objective.type} | '
+      '${gameSpec.objective.description}',
+    );
 
     // =========================
     // BACKGROUND
@@ -152,9 +180,11 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
     // SCORE
     // =========================
 
-    scoreText = TextComponent(
-      text: 'Score: 0',
-      position: Vector2(20, 70),
+    timerText = TextComponent(
+      text: gameSpec.rules.timeLimit != null
+          ? 'Time: ${remainingTime.ceil()}'
+          : '',
+      position: Vector2(20, 110),
       textRenderer: TextPaint(
         style: const TextStyle(
           color: Colors.white,
@@ -164,24 +194,44 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
       ),
     );
 
+    add(timerText);
+
     add(scoreText);
 
     // =========================
     // PLAYER
     // =========================
 
-   final player = Player(
-  position: Vector2(
-    size.x / 2,
-    size.y - 120,
-  ),
-  gameSize: size,
-  onHitEnemy: () {
-    gameOver = true;
-    showGameOverMessage();
-  },
-);
+    final player = Player(
+      position: Vector2(size.x / 2, size.y - 120),
+      gameSize: size,
+      onHitEnemy: () {
+        gameOver = true;
+        overlays.add('GameOver');
+      },
+      onReachedGoal: () {
+        if (objectiveRequiresGoal()) {
+          print('OBJECTIVE COMPLETED: REACHED GOAL');
+        } else {
+          print('GOAL REACHED, BUT THIS IS NOT THE CURRENT OBJECTIVE');
+        }
+      },
+    );
+
     add(player);
+
+    totalCollectibles = gameSpec.objects
+        .where(
+          (object) =>
+              object.type.toLowerCase().contains('collect') ||
+              object.type.toLowerCase().contains('item') ||
+              object.type.toLowerCase().contains('coin') ||
+              object.type.toLowerCase().contains('key') ||
+              object.type.toLowerCase().contains('gem') ||
+              object.type.toLowerCase().contains('fruit') ||
+              object.type.toLowerCase().contains('rune'),
+        )
+        .fold(0, (total, object) => total + object.count);
 
     // =========================
     // GAME OBJECTS
@@ -203,16 +253,53 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
             80 + (i * 70) % (size.x - 100),
             180 + ((i * 100) % (size.y - 250)),
           ),
+          gameSize: size,
+          isEnemy: objectSpec.type.toLowerCase().contains('enemy'),
+
           onCollected: () {
-            print('COLLECTED: ${objectSpec.name}');
+            collectedCount++;
 
             addScore(gameSpec.rules.scorePerItem);
+
+            print(
+              'Collected: ${objectSpec.name} '
+              '+${gameSpec.rules.scorePerItem}',
+            );
+
+            print('Progress: $collectedCount / $totalCollectibles');
           },
         );
 
         add(gameObject);
       }
     }
+  }
+
+  /////////////////////////////////////
+  bool objectiveRequiresCollecting() {
+    final type = gameSpec.objective.type.toLowerCase();
+
+    return type.contains('collect') ||
+        type.contains('gather') ||
+        type.contains('collectible');
+  }
+
+  bool objectiveRequiresGoal() {
+    final type = gameSpec.objective.type.toLowerCase();
+
+    return type.contains('goal') ||
+        type.contains('reach') ||
+        type.contains('destination') ||
+        type.contains('portal');
+  }
+
+  ////////////////////////////////////
+  bool isCollectObjective() {
+    final objective = gameSpec.objective.type.toLowerCase();
+
+    return objective.contains('collect') ||
+        objective.contains('gather') ||
+        objective.contains('collectible');
   }
 
   // =========================

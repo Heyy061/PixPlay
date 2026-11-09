@@ -7,14 +7,19 @@ import 'game_obj.dart';
 
 class Player extends PositionComponent with DragCallbacks, CollisionCallbacks {
   Player({
-    required Vector2 position,
-    required this.gameSize,
-    required this.onHitEnemy,
-  }) : super(position: position, size: Vector2.all(50), anchor: Anchor.center);
-
+  required Vector2 position,
+  required this.gameSize,
+  required this.onHitEnemy,
+  required this.onReachedGoal,
+}) : super(
+        position: position,
+        size: Vector2.all(50),
+        anchor: Anchor.center,
+      );
   final Vector2 gameSize;
   final VoidCallback onHitEnemy;
-
+  final VoidCallback onReachedGoal;
+Vector2 previousPosition = Vector2.zero();
   @override
   Future<void> onLoad() async {
     await super.onLoad();
@@ -33,51 +38,77 @@ class Player extends PositionComponent with DragCallbacks, CollisionCallbacks {
   }
 
   /////////////////////////////////////////
-  @override
-  void onDragUpdate(DragUpdateEvent event) {
-    position += event.localDelta;
+ @override
+void onDragUpdate(DragUpdateEvent event) {
+  previousPosition = position.clone();
 
-    final halfWidth = size.x / 2;
-    final halfHeight = size.y / 2;
+  position += event.localDelta;
 
-    position.x = position.x.clamp(halfWidth, gameSize.x - halfWidth);
+  final halfWidth = size.x / 2;
+  final halfHeight = size.y / 2;
 
-    position.y = position.y.clamp(halfHeight, gameSize.y - halfHeight);
+  position.x = position.x.clamp(
+    halfWidth,
+    gameSize.x - halfWidth,
+  );
+
+  position.y = position.y.clamp(
+    halfHeight,
+    gameSize.y - halfHeight,
+  );
+}
+
+ @override
+void onCollisionStart(
+  Set<Vector2> intersectionPoints,
+  PositionComponent other,
+) {
+  super.onCollisionStart(intersectionPoints, other);
+
+  if (other is! GameObject) return;
+
+  final type = other.objectType.toLowerCase();
+
+  // COLLECTIBLE
+  if (type.contains('collect') ||
+      type.contains('item') ||
+      type.contains('coin') ||
+      type.contains('key') ||
+      type.contains('cherry') ||
+      type.contains('rune') ||
+      type.contains('gem') ||
+      type.contains('fruit')) {
+    print('COLLECTED: ${other.objectName}');
+
+    other.onCollected?.call();
+    other.removeFromParent();
+
+    return;
   }
 
-  @override
-  void onCollisionStart(
-    Set<Vector2> intersectionPoints,
-    PositionComponent other,
-  ) {
-    super.onCollisionStart(intersectionPoints, other);
-
-    if (other is! GameObject) return;
-
-    final type = other.objectType.toLowerCase();
-
-    if (type.contains('collect') ||
-        type.contains('item') ||
-        type.contains('coin') ||
-        type.contains('key') ||
-        type.contains('cherry') ||
-        type.contains('rune') ||
-        type.contains('gem') ||
-        type.contains('fruit')) {
-      print('COLLECTED: ${other.objectName}');
-
-      other.onCollected?.call();
-      other.removeFromParent();
-
-      return;
-    }
-
+  // ENEMY
   if (type.contains('enemy')) {
-  print('PLAYER HIT ENEMY');
+    print('PLAYER HIT ENEMY');
 
-  onHitEnemy();
+    onHitEnemy();
+
+    return;
+  }
+
+ if (type.contains('obstacle')) {
+  print('PLAYER HIT OBSTACLE');
+
+  position = previousPosition;
 
   return;
 }
-  }
+if (type.contains('goal')) {
+  print('PLAYER REACHED GOAL');
+
+  onReachedGoal();
+
+  return;
+}
+
+}
 }
