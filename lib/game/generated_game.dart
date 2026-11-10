@@ -11,6 +11,8 @@ import '../models/game_spec.dart';
 
 class GeneratedGame extends FlameGame with HasCollisionDetection {
   final GameSpec gameSpec;
+  final VoidCallback? onGameWon;
+  final VoidCallback? onGameOver;
 
   late TextComponent timerText;
   late TextComponent scoreText;
@@ -28,7 +30,7 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
   int collectedCount = 0;
   int totalCollectibles = 0;
 
-  GeneratedGame({required this.gameSpec});
+  GeneratedGame({required this.gameSpec, this.onGameWon, this.onGameOver});
 
   // =========================
   // SCORE
@@ -60,7 +62,7 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
     if (type.contains('collect')) {
       if (totalCollectibles > 0 && collectedCount >= totalCollectibles) {
         gameWon = true;
-
+        onGameWon?.call();
         print('GAME WON - ALL COLLECTIBLES COLLECTED');
       }
 
@@ -86,7 +88,7 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
     if (type.contains('survive')) {
       if (gameSpec.rules.timeLimit != null && remainingTime <= 0) {
         gameWon = true;
-
+        onGameWon?.call();
         print('GAME WON - SURVIVED THE TIME LIMIT');
       }
     }
@@ -111,7 +113,7 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
           type.contains('collision') ||
           type.contains('death')) {
         gameOver = true;
-
+        onGameOver?.call();
         print('GAME OVER - LOSE CONDITION: ENEMY');
 
         return;
@@ -127,7 +129,7 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
           type.contains('timer') ||
           type.contains('timeout')) {
         gameOver = true;
-
+        onGameOver?.call();
         print('GAME OVER - LOSE CONDITION: TIME');
 
         return;
@@ -159,7 +161,7 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
         loseType.contains('damage')) {
       if (health <= 0) {
         gameOver = true;
-
+        onGameOver?.call();
         print('GAME OVER - PLAYER LOST ALL HEALTH');
       }
     }
@@ -231,7 +233,7 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
 
         if (winType.contains('survive')) {
           gameWon = true;
-
+          onGameWon?.call();
           print('GAME WON - SURVIVED TIME LIMIT');
         }
         // -------------------------
@@ -253,13 +255,14 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-
+    maxHealth = _getMaxHealth();
+    health = maxHealth;
     // =========================
     // TIMER INITIALIZATION
     // =========================
 
     if (gameSpec.rules.timeLimit != null) {
-      remainingTime = gameSpec.rules.timeLimit!.toDouble();
+      remainingTime = _getTimeLimit();
     }
 
     // =========================
@@ -298,7 +301,7 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
           ),
       ),
     );
-
+    _addWorldDecorations();
     // =========================
     // TITLE
     // =========================
@@ -387,7 +390,7 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
 
     totalCollectibles = gameSpec.objects
         .where((object) => _isCollectible(object.type))
-        .fold(0, (total, object) => total + object.count);
+        .fold(0, (total, object) => total + _getSpawnCount(object));
 
     print(
       'TOTAL COLLECTIBLES: '
@@ -441,6 +444,7 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
 
     // GAME OBJECTS
     // =========================
+
     final List<Vector2> spawnedPositions = [];
 
     for (final objectSpec in gameSpec.objects) {
@@ -451,9 +455,18 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
         'Count: ${objectSpec.count}',
       );
 
-      for (int i = 0; i < objectSpec.count; i++) {
-        // Generate a safe position BEFORE creating the object.
-        final objectPosition = _getRandomPosition(spawnedPositions);
+      final spawnCount = _getSpawnCount(objectSpec);
+
+      for (int i = 0; i < spawnCount; i++) {
+        // Check whether this object is an enemy.
+        final isEnemy = objectSpec.type.toLowerCase().contains('enemy');
+
+        // Generate a safe position.
+        // Enemies use difficulty-based spawn distance.
+        // Other objects use the normal safe-position system.
+        final objectPosition = isEnemy
+            ? _getEnemySpawnPosition(spawnedPositions)
+            : _getRandomPosition(spawnedPositions);
 
         // Remember this position so the next object
         // doesn't spawn too close to it.
@@ -465,26 +478,31 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
           position: objectPosition,
           gameSize: size,
 
-          isEnemy: objectSpec.type.toLowerCase().contains('enemy'),
+          // Enemy configuration
+          isEnemy: isEnemy,
 
-          targetPlayer: objectSpec.type.toLowerCase().contains('enemy')
-              ? player
-              : null,
+          targetPlayer: isEnemy ? player : null,
 
+          enemySpeed: _getEnemySpeed() * _getEnemyChaseStrength(),
+
+          // Collectible callback
           onCollected: () {
             if (gameWon || gameOver) {
               return;
             }
 
             collectedCount++;
+
             objectiveText.text = _getObjectiveText();
 
-            addScore(gameSpec.rules.scorePerItem);
+            final scorePerItem = gameSpec.rules.scorePerItem.clamp(1, 10000);
+
+            addScore(scorePerItem);
 
             print(
               'Collected: '
               '${objectSpec.name} '
-              '+${gameSpec.rules.scorePerItem}',
+              '+$scorePerItem',
             );
 
             print(
@@ -603,7 +621,10 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
     }
 
     // Fallback if a valid position wasn't found.
-    return Vector2(size.x / 2, size.y / 2);
+    return Vector2(
+      60 + _random.nextDouble() * (size.x - 120),
+      180 + _random.nextDouble() * (size.y - 260),
+    );
   }
 
   ///////////////////////////
@@ -633,5 +654,297 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
     }
 
     return gameSpec.objective.description;
+  }
+
+  ///////////////////////////////////////
+
+  double _getEnemySpeed() {
+    final difficulty = gameSpec.difficulty.toLowerCase();
+
+    double speed;
+
+    if (difficulty.contains('easy')) {
+      speed = 40;
+    } else if (difficulty.contains('hard')) {
+      speed = 100;
+    } else if (difficulty.contains('extreme')) {
+      speed = 140;
+    } else {
+      speed = 60;
+    }
+
+    return speed.clamp(20, 200);
+  }
+
+  ///////////////////////////////////////
+  int _getMaxHealth() {
+    final difficulty = gameSpec.difficulty.toLowerCase();
+
+    int health;
+
+    if (difficulty.contains('easy')) {
+      health = 5;
+    } else if (difficulty.contains('hard')) {
+      health = 2;
+    } else if (difficulty.contains('extreme')) {
+      health = 1;
+    } else {
+      health = 3;
+    }
+
+    // Safety limit.
+    return health.clamp(1, 10);
+  }
+
+  ///////////////////////////////////////////
+  double _getTimeLimit() {
+    final difficulty = gameSpec.difficulty.toLowerCase();
+
+    final generatedLimit = gameSpec.rules.timeLimit;
+
+    if (generatedLimit == null) {
+      return 0;
+    }
+
+    // Keep AI-generated timer within a safe range.
+    final baseTime = generatedLimit.clamp(10, 600).toDouble();
+
+    if (difficulty.contains('easy')) {
+      return baseTime * 1.25;
+    }
+
+    if (difficulty.contains('hard')) {
+      return baseTime * 0.8;
+    }
+
+    if (difficulty.contains('extreme')) {
+      return baseTime * 0.6;
+    }
+
+    return baseTime;
+  }
+
+  ///////////////////////////////////////
+  int _getSpawnCount(GameObjectSpec objectSpec) {
+    final difficulty = gameSpec.difficulty.toLowerCase();
+
+    // Never allow invalid object counts.
+    final baseCount = objectSpec.count.clamp(1, 20);
+
+    if (difficulty.contains('easy')) {
+      return max(1, (baseCount * 0.7).round());
+    }
+
+    if (difficulty.contains('hard')) {
+      return min(20, (baseCount * 1.3).ceil());
+    }
+
+    if (difficulty.contains('extreme')) {
+      return min(20, (baseCount * 1.6).ceil());
+    }
+
+    return baseCount;
+  }
+
+ double _getEnemyChaseStrength() {
+  final difficulty =
+      gameSpec.difficulty.toLowerCase();
+
+  double strength;
+
+  if (difficulty.contains('easy')) {
+    strength = 0.6;
+  } else if (difficulty.contains('hard')) {
+    strength = 1.2;
+  } else if (difficulty.contains('extreme')) {
+    strength = 1.5;
+  } else {
+    strength = 1.0;
+  }
+
+  return strength.clamp(0.5, 2.0);
+}
+  ///////////////////////////////////
+  void _addWorldDecorations() {
+    final value =
+        '${gameSpec.world.background} '
+                '${gameSpec.world.theme} '
+                '${gameSpec.mood}'
+            .toLowerCase();
+
+    if (value.contains('space') ||
+        value.contains('galaxy') ||
+        value.contains('cosmic')) {
+      _addStars();
+      return;
+    }
+
+    if (value.contains('forest') ||
+        value.contains('jungle') ||
+        value.contains('nature')) {
+      _addForestDecorations();
+      return;
+    }
+
+    if (value.contains('desert') || value.contains('sand')) {
+      _addDesertDecorations();
+      return;
+    }
+
+    if (value.contains('snow') ||
+        value.contains('ice') ||
+        value.contains('frozen')) {
+      _addSnowDecorations();
+      return;
+    }
+
+    if (value.contains('city') ||
+        value.contains('urban') ||
+        value.contains('street')) {
+      _addCityDecorations();
+      return;
+    }
+
+    _addDefaultDecorations();
+  }
+
+  /////////////////////////
+  void _addStars() {
+    for (int i = 0; i < 45; i++) {
+      final star = CircleComponent(
+        radius: 1.5 + _random.nextDouble() * 2,
+        position: Vector2(
+          _random.nextDouble() * size.x,
+          _random.nextDouble() * size.y,
+        ),
+        paint: Paint()..color = Colors.white70,
+      );
+
+      add(star);
+    }
+  }
+
+  void _addForestDecorations() {
+    for (int i = 0; i < 20; i++) {
+      final tree = CircleComponent(
+        radius: 12 + _random.nextDouble() * 10,
+        position: Vector2(
+          _random.nextDouble() * size.x,
+          180 + _random.nextDouble() * (size.y - 200),
+        ),
+        paint: Paint()..color = Colors.green.shade800,
+      );
+
+      add(tree);
+    }
+  }
+
+  void _addDesertDecorations() {
+    for (int i = 0; i < 15; i++) {
+      final rock = CircleComponent(
+        radius: 8 + _random.nextDouble() * 8,
+        position: Vector2(
+          _random.nextDouble() * size.x,
+          180 + _random.nextDouble() * (size.y - 200),
+        ),
+        paint: Paint()..color = Colors.brown.shade600,
+      );
+
+      add(rock);
+    }
+  }
+
+  void _addSnowDecorations() {
+    for (int i = 0; i < 30; i++) {
+      final snow = CircleComponent(
+        radius: 2 + _random.nextDouble() * 3,
+        position: Vector2(
+          _random.nextDouble() * size.x,
+          180 + _random.nextDouble() * (size.y - 200),
+        ),
+        paint: Paint()..color = Colors.white70,
+      );
+
+      add(snow);
+    }
+  }
+
+  void _addCityDecorations() {
+    for (int i = 0; i < 12; i++) {
+      final building = RectangleComponent(
+        size: Vector2(
+          25 + _random.nextDouble() * 25,
+          30 + _random.nextDouble() * 70,
+        ),
+        position: Vector2(
+          _random.nextDouble() * size.x,
+          180 + _random.nextDouble() * (size.y - 220),
+        ),
+        paint: Paint()..color = Colors.grey.shade800,
+      );
+
+      add(building);
+    }
+  }
+
+  void _addDefaultDecorations() {
+    for (int i = 0; i < 12; i++) {
+      final decoration = CircleComponent(
+        radius: 4 + _random.nextDouble() * 5,
+        position: Vector2(
+          _random.nextDouble() * size.x,
+          180 + _random.nextDouble() * (size.y - 200),
+        ),
+        paint: Paint()..color = Colors.white24,
+      );
+
+      add(decoration);
+    }
+  }
+
+  ////////////////////////////
+  Vector2 _getEnemySpawnPosition(List<Vector2> existingPositions) {
+    final playerStart = Vector2(size.x / 2, size.y - 120);
+
+    final difficulty = gameSpec.difficulty.toLowerCase();
+
+    double minimumDistance = 180;
+
+    if (difficulty.contains('easy')) {
+      minimumDistance = 260;
+    } else if (difficulty.contains('hard')) {
+      minimumDistance = 150;
+    } else if (difficulty.contains('extreme')) {
+      minimumDistance = 100;
+    }
+
+    for (int attempt = 0; attempt < 50; attempt++) {
+      final position = Vector2(
+        60 + _random.nextDouble() * (size.x - 120),
+        180 + _random.nextDouble() * (size.y - 260),
+      );
+
+      if (position.distanceTo(playerStart) < minimumDistance) {
+        continue;
+      }
+
+      bool tooClose = false;
+
+      for (final existing in existingPositions) {
+        if (position.distanceTo(existing) < 70) {
+          tooClose = true;
+          break;
+        }
+      }
+
+      if (!tooClose) {
+        return position;
+      }
+    }
+
+    return Vector2(
+      60 + _random.nextDouble() * (size.x - 120),
+      180 + _random.nextDouble() * (size.y - 260),
+    );
   }
 }
