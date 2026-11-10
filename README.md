@@ -6,9 +6,14 @@ The app takes a user's game idea, preferences, and an optional image, then uses 
 
 ## Features
 
+## Features
+
 - AI-powered game generation
-- Dynamic 2D game creation
-- AI-generated worlds, players, enemies, and objectives
+- Select your preferred game genre and mood
+- Choose the game difficulty
+- Provide a game title and description
+- Add an image as inspiration for the game
+- Dynamically generated 2D worlds, players, enemies, and objectives
 - Movement and collision system
 - Health, scoring, and win/lose conditions
 
