@@ -1,17 +1,66 @@
-# game
+# AI Game Generator
 
-A new Flutter project.
+An AI-powered 2D game generator built with **Flutter, Flame, and Groq AI**.
+
+The app takes a user's game idea, preferences, and an optional image, then uses AI to generate a structured game specification and turn it into a playable 2D game.
+
+## Features
+
+## Features
+
+- AI-powered game generation
+- Select your preferred game genre and mood
+- Choose the game difficulty
+- Provide a game title and description
+- Add an image as inspiration for the game
+- Dynamically generated 2D worlds, players, enemies, and objectives
+- Movement and collision system
+- Health, scoring, and win/lose conditions
+
+## Built With
+
+- Flutter & Dart
+- Flame
+- Groq AI
+- Qwen
+- flutter_dotenv
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+### 1. Clone the repository
 
-A few resources to get you started if this is your first Flutter project:
+```bash
+git clone https://github.com/Heyy061/PixPlay.git
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+### 2. Navigate to the project
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+cd your-repository
+```
+
+### 3. Install dependencies
+
+```bash
+flutter pub get
+```
+
+### 4. Configure the API key
+
+Create:
+
+```text
+.env
+```
+
+and add:
+
+```env
+GROQ_API_KEY=your_api_key_here
+```
+
+### 5. Run the application
+
+```bash
+flutter run
+```
