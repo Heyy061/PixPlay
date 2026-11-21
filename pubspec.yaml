@@ -21,6 +21,7 @@ dependencies:
   flutter_dotenv: ^6.0.1
   flutter_riverpod: ^3.5.0
   flame: ^1.38.2
+  
 
 dev_dependencies:
   flutter_test:

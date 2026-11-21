@@ -3,6 +3,15 @@ class GameSpec {
   final String genre;
   final String mood;
   final String difficulty;
+
+  // Visual information extracted from the uploaded image
+  final String visualTheme;
+  final String colorPalette;
+  final String environmentStyle;
+  final String playerVisual;
+  final String enemyVisual;
+  final String collectibleVisual;
+
   final WorldSpec world;
   final PlayerSpec player;
   final ObjectiveSpec objective;
@@ -11,13 +20,19 @@ class GameSpec {
   final WinCondition winCondition;
   final LoseCondition loseCondition;
 
-  
-
   GameSpec({
     required this.title,
     required this.genre,
     required this.mood,
     required this.difficulty,
+
+    required this.visualTheme,
+    required this.colorPalette,
+    required this.environmentStyle,
+    required this.playerVisual,
+    required this.enemyVisual,
+    required this.collectibleVisual,
+
     required this.world,
     required this.player,
     required this.objective,
@@ -33,21 +48,26 @@ class GameSpec {
       genre: json['genre'] ?? 'adventure',
       mood: json['mood'] ?? 'epic',
       difficulty: json['difficulty'] ?? 'medium',
+      //////
+      visualTheme: json['visual_theme'] ?? 'simple cartoon',
+      colorPalette: json['color_palette'] ?? 'balanced colors',
+      environmentStyle: json['environment_style'] ?? 'simple',
+      playerVisual: json['player_visual'] ?? 'simple character',
+      enemyVisual: json['enemy_visual'] ?? 'simple enemy',
+      collectibleVisual: json['collectible_visual'] ?? 'simple collectible',
+      /////
       world: WorldSpec.fromJson(json['world'] ?? {}),
       player: PlayerSpec.fromJson(json['player'] ?? {}),
       objective: ObjectiveSpec.fromJson(json['objective'] ?? {}),
       objects: (json['objects'] as List? ?? [])
           .map(
-            (object) => GameObjectSpec.fromJson(
-              Map<String, dynamic>.from(object),
-            ),
+            (object) =>
+                GameObjectSpec.fromJson(Map<String, dynamic>.from(object)),
           )
           .toList(),
       rules: GameRules.fromJson(json['rules'] ?? {}),
-      winCondition:
-          WinCondition.fromJson(json['win_condition'] ?? {}),
-      loseCondition:
-          LoseCondition.fromJson(json['lose_condition'] ?? {}),
+      winCondition: WinCondition.fromJson(json['win_condition'] ?? {}),
+      loseCondition: LoseCondition.fromJson(json['lose_condition'] ?? {}),
     );
   }
 
@@ -57,6 +77,14 @@ class GameSpec {
       'genre': genre,
       'mood': mood,
       'difficulty': difficulty,
+      //
+      'visual_theme': visualTheme,
+      'color_palette': colorPalette,
+      'environment_style': environmentStyle,
+      'player_visual': playerVisual,
+      'enemy_visual': enemyVisual,
+      'collectible_visual': collectibleVisual,
+      //
       'world': world.toJson(),
       'player': player.toJson(),
       'objective': objective.toJson(),
@@ -67,7 +95,6 @@ class GameSpec {
     };
   }
 }
-
 
 /// Describes the game environment.
 class WorldSpec {
@@ -90,24 +117,16 @@ class WorldSpec {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'theme': theme,
-      'background': background,
-      'lighting': lighting,
-    };
+    return {'theme': theme, 'background': background, 'lighting': lighting};
   }
 }
-
 
 /// Describes the player.
 class PlayerSpec {
   final String type;
   final String movement;
 
-  PlayerSpec({
-    required this.type,
-    required this.movement,
-  });
+  PlayerSpec({required this.type, required this.movement});
 
   factory PlayerSpec.fromJson(Map<String, dynamic> json) {
     return PlayerSpec(
@@ -117,23 +136,16 @@ class PlayerSpec {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'type': type,
-      'movement': movement,
-    };
+    return {'type': type, 'movement': movement};
   }
 }
-
 
 /// Describes what the player needs to accomplish.
 class ObjectiveSpec {
   final String type;
   final String description;
 
-  ObjectiveSpec({
-    required this.type,
-    required this.description,
-  });
+  ObjectiveSpec({required this.type, required this.description});
 
   factory ObjectiveSpec.fromJson(Map<String, dynamic> json) {
     return ObjectiveSpec(
@@ -143,13 +155,9 @@ class ObjectiveSpec {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'type': type,
-      'description': description,
-    };
+    return {'type': type, 'description': description};
   }
 }
-
 
 /// Any interactive object inside the game.
 class GameObjectSpec {
@@ -157,11 +165,7 @@ class GameObjectSpec {
   final String type;
   final int count;
 
-  GameObjectSpec({
-    required this.name,
-    required this.type,
-    required this.count,
-  });
+  GameObjectSpec({required this.name, required this.type, required this.count});
 
   factory GameObjectSpec.fromJson(Map<String, dynamic> json) {
     return GameObjectSpec(
@@ -172,24 +176,16 @@ class GameObjectSpec {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'type': type,
-      'count': count,
-    };
+    return {'name': name, 'type': type, 'count': count};
   }
 }
-
 
 /// General gameplay rules.
 class GameRules {
   final int? timeLimit;
   final int scorePerItem;
 
-  GameRules({
-    this.timeLimit,
-    required this.scorePerItem,
-  });
+  GameRules({this.timeLimit, required this.scorePerItem});
 
   factory GameRules.fromJson(Map<String, dynamic> json) {
     return GameRules(
@@ -199,48 +195,33 @@ class GameRules {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'time_limit': timeLimit,
-      'score_per_item': scorePerItem,
-    };
+    return {'time_limit': timeLimit, 'score_per_item': scorePerItem};
   }
 }
-
 
 /// Defines how the player wins.
 class WinCondition {
   final String type;
 
-  WinCondition({
-    required this.type,
-  });
+  WinCondition({required this.type});
 
   factory WinCondition.fromJson(Map<String, dynamic> json) {
-    return WinCondition(
-      type: json['type'] ?? '',
-    );
+    return WinCondition(type: json['type'] ?? '');
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'type': type,
-    };
+    return {'type': type};
   }
 }
-
 
 /// Defines how the player loses.
 class LoseCondition {
   final String type;
 
-  LoseCondition({
-    required this.type,
-  });
+  LoseCondition({required this.type});
 
   factory LoseCondition.fromJson(Map<String, dynamic> json) {
-    return LoseCondition(
-      type: typeFromJson(json),
-    );
+    return LoseCondition(type: typeFromJson(json));
   }
 
   static String typeFromJson(Map<String, dynamic> json) {
@@ -248,8 +229,30 @@ class LoseCondition {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'type': type,
-    };
+    return {'type': type};
   }
+}
+
+class GameplaySpec {
+  final String camera;
+  final bool gravity;
+  final bool jumping;
+  final bool shooting;
+  final bool enemies;
+  final bool collectibles;
+  final bool timer;
+  final bool scrolling;
+  final int? lives;
+
+  GameplaySpec({
+    required this.camera,
+    required this.gravity,
+    required this.jumping,
+    required this.shooting,
+    required this.enemies,
+    required this.collectibles,
+    required this.timer,
+    required this.scrolling,
+    this.lives,
+  });
 }

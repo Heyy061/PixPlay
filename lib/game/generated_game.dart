@@ -13,12 +13,13 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
   final GameSpec gameSpec;
   final VoidCallback? onGameWon;
   final VoidCallback? onGameOver;
-
+  late Player player;
   late TextComponent timerText;
   late TextComponent scoreText;
   late TextComponent healthText;
   late TextComponent objectiveText;
   final Random _random = Random();
+  Vector2 joystickDirection = Vector2.zero();
   int score = 0;
   int health = 3;
   int maxHealth = 3;
@@ -293,12 +294,7 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
       RectangleComponent(
         size: size,
         position: Vector2.zero(),
-        paint: Paint()
-          ..color = _getWorldColor(
-            gameSpec.world.background,
-            gameSpec.world.theme,
-            gameSpec.world.lighting,
-          ),
+        paint: Paint()..color = _getWorldColor(),
       ),
     );
     _addWorldDecorations();
@@ -401,11 +397,12 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
     // PLAYER
     // =========================
 
-    final player = Player(
+    player = Player(
       position: Vector2(size.x / 2, size.y - 120),
       gameSize: size,
       movementType: gameSpec.player.movement,
       playerType: gameSpec.player.type,
+      playerVisual: gameSpec.playerVisual,
       // -------------------------
       // ENEMY HIT
       // -------------------------
@@ -478,6 +475,8 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
           position: objectPosition,
           gameSize: size,
 
+          enemyVisual: gameSpec.enemyVisual,
+          collectibleVisual: gameSpec.collectibleVisual,
           // Enemy configuration
           isEnemy: isEnemy,
 
@@ -526,62 +525,71 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
   // BACKGROUND COLOR
   // =========================
 
-  Color _getWorldColor(String background, String theme, String lighting) {
-    final value = '$background $theme $lighting'.toLowerCase();
+  Color _getWorldColor() {
+    final palette = gameSpec.colorPalette.toLowerCase();
+    final style = gameSpec.environmentStyle.toLowerCase();
+    final mood = gameSpec.mood.toLowerCase();
 
-    if (value.contains('forest') ||
-        value.contains('jungle') ||
-        value.contains('nature')) {
-      if (value.contains('dark') ||
-          value.contains('night') ||
-          value.contains('dim')) {
-        return Colors.green.shade900;
-      }
-
-      return Colors.green.shade900;
+    // Color palette has highest priority.
+    if (palette.contains('green') ||
+        palette.contains('forest') ||
+        palette.contains('nature')) {
+      return const Color(0xFF183A2B);
     }
 
-    if (value.contains('space') ||
-        value.contains('galaxy') ||
-        value.contains('cosmic')) {
-      return Colors.black;
+    if (palette.contains('blue') ||
+        palette.contains('ocean') ||
+        palette.contains('ice')) {
+      return const Color(0xFF162B45);
     }
 
-    if (value.contains('desert') || value.contains('sand')) {
-      return Colors.orange.shade800;
+    if (palette.contains('red') ||
+        palette.contains('fire') ||
+        palette.contains('orange')) {
+      return const Color(0xFF421C1C);
     }
 
-    if (value.contains('ocean') ||
-        value.contains('underwater') ||
-        value.contains('water')) {
-      return Colors.blue.shade900;
+    if (palette.contains('purple') ||
+        palette.contains('magic') ||
+        palette.contains('neon')) {
+      return const Color(0xFF291A3D);
     }
 
-    if (value.contains('snow') ||
-        value.contains('ice') ||
-        value.contains('frozen')) {
-      return Colors.blueGrey.shade200;
+    if (palette.contains('yellow') ||
+        palette.contains('desert') ||
+        palette.contains('sand')) {
+      return const Color(0xFF4A3920);
     }
 
-    if (value.contains('city') ||
-        value.contains('urban') ||
-        value.contains('street')) {
-      return Colors.grey.shade900;
+    // Environment style fallback.
+    if (style.contains('forest') ||
+        style.contains('jungle') ||
+        style.contains('nature')) {
+      return const Color(0xFF183A2B);
     }
 
-    if (value.contains('dark') ||
-        value.contains('horror') ||
-        value.contains('ominous')) {
-      return Colors.grey.shade900;
+    if (style.contains('snow') ||
+        style.contains('ice') ||
+        style.contains('winter')) {
+      return const Color(0xFF243B52);
     }
 
-    if (value.contains('bright') ||
-        value.contains('cheerful') ||
-        value.contains('happy')) {
-      return Colors.lightBlue.shade400;
+    if (style.contains('desert')) {
+      return const Color(0xFF4A3920);
     }
 
-    return Colors.blueGrey.shade800;
+    if (style.contains('city') || style.contains('urban')) {
+      return const Color(0xFF20242B);
+    }
+
+    // Mood fallback.
+    if (mood.contains('dark') ||
+        mood.contains('mysterious') ||
+        mood.contains('horror')) {
+      return const Color(0xFF15151C);
+    }
+
+    return const Color(0xFF202938);
   }
 
   //////////////////////////////////////////RANDOM
@@ -746,28 +754,29 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
     return baseCount;
   }
 
- double _getEnemyChaseStrength() {
-  final difficulty =
-      gameSpec.difficulty.toLowerCase();
+  double _getEnemyChaseStrength() {
+    final difficulty = gameSpec.difficulty.toLowerCase();
 
-  double strength;
+    double strength;
 
-  if (difficulty.contains('easy')) {
-    strength = 0.6;
-  } else if (difficulty.contains('hard')) {
-    strength = 1.2;
-  } else if (difficulty.contains('extreme')) {
-    strength = 1.5;
-  } else {
-    strength = 1.0;
+    if (difficulty.contains('easy')) {
+      strength = 0.6;
+    } else if (difficulty.contains('hard')) {
+      strength = 1.2;
+    } else if (difficulty.contains('extreme')) {
+      strength = 1.5;
+    } else {
+      strength = 1.0;
+    }
+
+    return strength.clamp(0.5, 2.0);
   }
 
-  return strength.clamp(0.5, 2.0);
-}
   ///////////////////////////////////
   void _addWorldDecorations() {
     final value =
-        '${gameSpec.world.background} '
+        '${gameSpec.environmentStyle} '
+                '${gameSpec.world.background} '
                 '${gameSpec.world.theme} '
                 '${gameSpec.mood}'
             .toLowerCase();
@@ -793,7 +802,8 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
 
     if (value.contains('snow') ||
         value.contains('ice') ||
-        value.contains('frozen')) {
+        value.contains('frozen') ||
+        value.contains('winter')) {
       _addSnowDecorations();
       return;
     }
@@ -946,5 +956,9 @@ class GeneratedGame extends FlameGame with HasCollisionDetection {
       60 + _random.nextDouble() * (size.x - 120),
       180 + _random.nextDouble() * (size.y - 260),
     );
+  }
+
+  void setJoystickDirection(Offset direction) {
+    player.joystickDirection = Vector2(direction.dx, direction.dy);
   }
 }

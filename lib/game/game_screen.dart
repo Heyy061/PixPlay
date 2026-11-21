@@ -1,8 +1,10 @@
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:game/game/joystick.dart';
 
 import '../models/game_spec.dart';
 import 'generated_game.dart';
+
 
 class GameScreen extends StatefulWidget {
   final GameSpec gameSpec;
@@ -43,47 +45,60 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body:Stack(
-  children: [
-    GameWidget(game: game),
+  
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    body: Stack(
+      children: [
+        GameWidget(game: game),
 
-    Positioned(
-      top: 40,
-      left: 16,
-      child: IconButton(
-        onPressed: () {
-          Navigator.pop(context);
-        },
-        icon: const Icon(
-          Icons.arrow_back,
-          color: Colors.white,
-          size: 30,
+        // Virtual joystick
+        if (!game.gameWon && !game.gameOver)
+          Positioned(
+            left: 25,
+            bottom: 25,
+            child: VirtualJoystick(
+              onDirectionChanged: (direction) {
+                game.setJoystickDirection(direction);
+              },
+            ),
+          ),
+
+        Positioned(
+          top: 40,
+          left: 16,
+          child: IconButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            icon: const Icon(
+              Icons.arrow_back,
+              color: Colors.white,
+              size: 30,
+            ),
+          ),
         ),
-      ),
+
+        // Win overlay
+        if (game.gameWon)
+          _buildResultOverlay(
+            title: 'YOU WIN!',
+            subtitle: 'Congratulations 🎉',
+            isWin: true,
+          ),
+
+        // Game over overlay
+        if (game.gameOver)
+          _buildResultOverlay(
+            title: 'GAME OVER',
+            subtitle: 'Better luck next time!',
+            isWin: false,
+          ),
+      ],
     ),
-
-    // Win overlay
-    if (game.gameWon)
-      _buildResultOverlay(
-        title: 'YOU WIN!',
-        subtitle: 'Congratulations 🎉',
-        isWin: true,
-      ),
-
-    // Game over overlay
-    if (game.gameOver)
-      _buildResultOverlay(
-        title: 'GAME OVER',
-        subtitle: 'Better luck next time!',
-        isWin: false,
-      ),
-  ],
-)
-    );
-  }
+  );
+}
 
   Widget _buildResultOverlay({
     required String title,

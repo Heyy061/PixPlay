@@ -1,14 +1,14 @@
-
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:game/game/character_render.dart';
 
 import 'game_obj.dart';
 
 class Player extends PositionComponent
-    with KeyboardHandler, CollisionCallbacks {
+    with KeyboardHandler, DragCallbacks, CollisionCallbacks {
   Player({
     required Vector2 position,
     required this.gameSize,
@@ -16,9 +16,10 @@ class Player extends PositionComponent
     required this.onReachedGoal,
     required this.movementType,
     required this.playerType,
+    required this.playerVisual,
   }) : super(
           position: position,
-          size: Vector2.all(50),
+          size: Vector2(70, 100),
           anchor: Anchor.center,
         );
 
@@ -29,12 +30,18 @@ class Player extends PositionComponent
 
   final String movementType;
   final String playerType;
+  final String playerVisual;
 
   final Set<LogicalKeyboardKey> keysPressed = {};
 
   bool _enemyCooldown = false;
 
   Vector2 previousPosition = Vector2.zero();
+  Vector2 joystickDirection = Vector2.zero();
+
+  void setJoystickDirection(Vector2 direction) {
+    joystickDirection = direction;
+  }
 
   // =============================== ONLOAD ===============================
 
@@ -45,62 +52,17 @@ class Player extends PositionComponent
     add(CircleHitbox());
   }
 
-  // =============================== PLAYER COLOR ===============================
-
-  Color _getPlayerColor() {
-    final type = playerType.toLowerCase();
-
-    if (type.contains('robot') ||
-        type.contains('machine') ||
-        type.contains('android')) {
-      return Colors.blueGrey;
-    }
-
-    if (type.contains('wizard') ||
-        type.contains('mage') ||
-        type.contains('magic')) {
-      return Colors.deepPurple;
-    }
-
-    if (type.contains('knight') ||
-        type.contains('warrior') ||
-        type.contains('fighter')) {
-      return Colors.blue;
-    }
-
-    if (type.contains('alien')) {
-      return Colors.greenAccent;
-    }
-
-    if (type.contains('monster')) {
-      return Colors.redAccent;
-    }
-
-    if (type.contains('ninja')) {
-      return Colors.black;
-    }
-
-    if (type.contains('fire') ||
-        type.contains('flame')) {
-      return Colors.deepOrange;
-    }
-
-    return Colors.blue;
-  }
-
   // =============================== RENDER ===============================
 
   @override
   void render(Canvas canvas) {
     super.render(canvas);
 
-    final paint = Paint()
-      ..color = _getPlayerColor();
-
-    canvas.drawCircle(
-      Offset(size.x / 2, size.y / 2),
-      size.x / 2,
-      paint,
+    CharacterRenderer.drawPlayer(
+      canvas: canvas,
+      size: Size(size.x, size.y),
+      visual: playerVisual,
+      playerType: playerType,
     );
   }
 
@@ -108,28 +70,22 @@ class Player extends PositionComponent
 
   @override
   void onDragUpdate(DragUpdateEvent event) {
-    final movement = movementType.toLowerCase();
+    previousPosition = position.clone();
 
-    if (movement.contains('drag') ||
-        movement.contains('touch') ||
-        movement.contains('joystick')) {
-      previousPosition = position.clone();
+    position += event.localDelta;
 
-      position += event.localDelta;
+    final halfWidth = size.x / 2;
+    final halfHeight = size.y / 2;
 
-      final halfWidth = size.x / 2;
-      final halfHeight = size.y / 2;
+    position.x = position.x.clamp(
+      halfWidth,
+      gameSize.x - halfWidth,
+    );
 
-      position.x = position.x.clamp(
-        halfWidth,
-        gameSize.x - halfWidth,
-      );
-
-      position.y = position.y.clamp(
-        halfHeight,
-        gameSize.y - halfHeight,
-      );
-    }
+    position.y = position.y.clamp(
+      halfHeight,
+      gameSize.y - halfHeight,
+    );
   }
 
   // =============================== COLLISION ===============================
@@ -199,7 +155,9 @@ class Player extends PositionComponent
 
     // ================= GOAL =================
 
-    if (type.contains('goal')) {
+    if (type.contains('goal') ||
+        type.contains('portal') ||
+        type.contains('destination')) {
       print('PLAYER REACHED GOAL');
 
       onReachedGoal();
@@ -234,45 +192,43 @@ class Player extends PositionComponent
   void update(double dt) {
     super.update(dt);
 
-    final movement = movementType.toLowerCase();
-
-    if (!movement.contains('keyboard')) {
-      return;
-    }
-
     previousPosition = position.clone();
 
     const speed = 250.0;
 
-    // UP
+    // ================= JOYSTICK =================
 
-    if (keysPressed.contains(LogicalKeyboardKey.arrowUp) ||
-        keysPressed.contains(LogicalKeyboardKey.keyW)) {
-      position.y -= speed * dt;
+    if (joystickDirection.length > 0) {
+      position += joystickDirection * speed * dt;
     }
 
-    // DOWN
+    // ================= KEYBOARD =================
 
-    if (keysPressed.contains(LogicalKeyboardKey.arrowDown) ||
-        keysPressed.contains(LogicalKeyboardKey.keyS)) {
-      position.y += speed * dt;
+    final movement = movementType.toLowerCase();
+
+    if (movement.contains('keyboard')) {
+      if (keysPressed.contains(LogicalKeyboardKey.arrowUp) ||
+          keysPressed.contains(LogicalKeyboardKey.keyW)) {
+        position.y -= speed * dt;
+      }
+
+      if (keysPressed.contains(LogicalKeyboardKey.arrowDown) ||
+          keysPressed.contains(LogicalKeyboardKey.keyS)) {
+        position.y += speed * dt;
+      }
+
+      if (keysPressed.contains(LogicalKeyboardKey.arrowLeft) ||
+          keysPressed.contains(LogicalKeyboardKey.keyA)) {
+        position.x -= speed * dt;
+      }
+
+      if (keysPressed.contains(LogicalKeyboardKey.arrowRight) ||
+          keysPressed.contains(LogicalKeyboardKey.keyD)) {
+        position.x += speed * dt;
+      }
     }
 
-    // LEFT
-
-    if (keysPressed.contains(LogicalKeyboardKey.arrowLeft) ||
-        keysPressed.contains(LogicalKeyboardKey.keyA)) {
-      position.x -= speed * dt;
-    }
-
-    // RIGHT
-
-    if (keysPressed.contains(LogicalKeyboardKey.arrowRight) ||
-        keysPressed.contains(LogicalKeyboardKey.keyD)) {
-      position.x += speed * dt;
-    }
-
-    // Keep player inside screen
+    // ================= SCREEN BOUNDS =================
 
     final halfWidth = size.x / 2;
     final halfHeight = size.y / 2;

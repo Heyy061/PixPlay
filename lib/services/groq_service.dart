@@ -1,4 +1,3 @@
-
 import 'dart:convert';
 import 'dart:io';
 
@@ -42,7 +41,8 @@ class GroqGameService {
     // 3. User prompt
     // ------------------------------------------------------------
 
-    final userPrompt = '''
+    final userPrompt =
+        '''
 You are the game designer for PixPlay.
 
 PixPlay converts a user's photo into a small playable game.
@@ -54,16 +54,8 @@ USER SETTINGS:
 Genre: $genre
 Mood: $mood
 Difficulty: $difficulty
-Title: ${
-      title?.trim().isNotEmpty == true
-          ? title!.trim()
-          : 'Not provided'
-    }
-Description: ${
-      description?.trim().isNotEmpty == true
-          ? description!.trim()
-          : 'Not provided'
-    }
+Title: ${title?.trim().isNotEmpty == true ? title!.trim() : 'Not provided'}
+Description: ${description?.trim().isNotEmpty == true ? description!.trim() : 'Not provided'}
 
 RULES:
 
@@ -101,6 +93,27 @@ RULES:
             'content': '''
 You generate structured game specifications for PixPlay.
 
+PixPlay converts a user's uploaded image into a small playable 2D game.
+
+The uploaded image is the PRIMARY visual inspiration for the game.
+
+Analyze the image carefully before creating the game.
+
+Identify:
+- the main subjects and objects
+- dominant colors
+- visual style
+- overall mood
+- recognizable shapes
+- possible characters
+- possible collectible objects
+- suitable environment
+
+The generated game MUST visually reflect the uploaded image.
+
+Keep the game SIMPLE but VISUALLY APPEALING.
+Do not create a generic game unrelated to the image.
+
 Return ONLY valid JSON.
 
 The JSON must contain exactly these top-level fields:
@@ -109,6 +122,14 @@ title
 genre
 mood
 difficulty
+
+visual_theme
+color_palette
+environment_style
+player_visual
+enemy_visual
+collectible_visual
+
 world
 player
 objective
@@ -117,59 +138,115 @@ rules
 win_condition
 lose_condition
 
-IMPORTANT JSON STRUCTURE:
+VISUAL FIELDS:
+
+"visual_theme":
+Describe the main visual identity of the uploaded image.
+
+"color_palette":
+Describe the dominant colors actually visible in the uploaded image.
+
+"environment_style":
+Describe a simple game environment inspired by the uploaded image.
+
+"player_visual":
+Describe how the player should visually look based on the uploaded image.
+
+"enemy_visual":
+Describe an enemy that fits the visual style of the uploaded image.
+
+"collectible_visual":
+Describe collectible objects inspired by recognizable objects in the uploaded image.
+
+IMPORTANT:
+
+Do NOT invent unrelated visual themes.
+
+For example, if the image contains colorful toys or keychains,
+do NOT turn the game into a generic forest, space, medieval,
+or sci-fi game.
+
+Use the actual visual identity of the image.
+
+The game can simplify the image into a 2D game,
+but it should still be recognizable as being inspired by the image.
+
+WORLD STRUCTURE:
 
 "world" MUST be an object:
+
 {
   "theme": "string",
   "background": "string",
   "lighting": "string"
 }
 
+PLAYER STRUCTURE:
+
 "player" MUST be an object:
+
 {
   "type": "string",
-  "movement": "string"
+  "movement": "joystick"
 }
 
+The player movement MUST be "joystick".
+
+OBJECTIVE STRUCTURE:
+
 "objective" MUST be an object:
+
 {
   "type": "string",
   "description": "string"
 }
 
+OBJECTS:
+
 "objects" MUST be an array of objects.
 
-Each object inside "objects" MUST have:
+Each object MUST contain:
+
 {
   "name": "string",
-  "type": "string",
+  "type": "collectible/enemy/obstacle/goal",
   "count": number
 }
 
+RULES:
+
 "rules" MUST be an object:
+
 {
   "time_limit": number or null,
   "score_per_item": number
 }
 
+WIN CONDITION:
+
 "win_condition" MUST be an object:
+
 {
   "type": "string"
 }
+
+LOSE CONDITION:
 
 "lose_condition" MUST be an object:
+
 {
   "type": "string"
 }
 
-NEVER return these fields as strings containing JSON.
+IMPORTANT JSON RULES:
 
-For example, this is WRONG:
+Never return nested objects as strings.
+
+WRONG:
 
 "world": "{\\"theme\\":\\"forest\\"}"
 
-This is CORRECT:
+CORRECT:
 
 "world": {
   "theme": "forest",
@@ -177,31 +254,25 @@ This is CORRECT:
   "lighting": "bright"
 }
 
-Do not add explanations.
-Do not use markdown.
-Do not wrap the JSON in ```json.
+Do not return markdown.
+Do not use code fences.
+Do not return explanations.
+Return JSON only.
 ''',
           },
           {
             'role': 'user',
             'content': [
-              {
-                'type': 'text',
-                'text': userPrompt,
-              },
+              {'type': 'text', 'text': userPrompt},
               {
                 'type': 'image_url',
-                'image_url': {
-                  'url': 'data:image/jpeg;base64,$base64Image',
-                },
+                'image_url': {'url': 'data:image/jpeg;base64,$base64Image'},
               },
             ],
           },
         ],
 
-        'response_format': {
-          'type': 'json_object',
-        },
+        'response_format': {'type': 'json_object'},
 
         'reasoning_effort': 'low',
 
@@ -236,9 +307,7 @@ Do not wrap the JSON in ```json.
 
       responseData = decoded;
     } catch (e) {
-      throw Exception(
-        'Failed to decode Groq API response: $e',
-      );
+      throw Exception('Failed to decode Groq API response: $e');
     }
 
     // ------------------------------------------------------------
@@ -272,9 +341,7 @@ Do not wrap the JSON in ```json.
     try {
       decodedGame = jsonDecode(content.toString());
     } catch (e) {
-      throw Exception(
-        'Groq returned invalid JSON:\n$content\n\nError: $e',
-      );
+      throw Exception('Groq returned invalid JSON:\n$content\n\nError: $e');
     }
 
     // ------------------------------------------------------------
@@ -300,25 +367,31 @@ Do not wrap the JSON in ```json.
     // 11. Validate important fields
     // ------------------------------------------------------------
 
-    final requiredFields = [
-      'title',
-      'genre',
-      'mood',
-      'difficulty',
-      'world',
-      'player',
-      'objective',
-      'objects',
-      'rules',
-      'win_condition',
-      'lose_condition',
-    ];
+   final requiredFields = [
+  'title',
+  'genre',
+  'mood',
+  'difficulty',
+
+  'visual_theme',
+  'color_palette',
+  'environment_style',
+  'player_visual',
+  'enemy_visual',
+  'collectible_visual',
+
+  'world',
+  'player',
+  'objective',
+  'objects',
+  'rules',
+  'win_condition',
+  'lose_condition',
+];
 
     for (final field in requiredFields) {
       if (!decodedGame.containsKey(field)) {
-        throw Exception(
-          'Groq GameSpec is missing required field: $field',
-        );
+        throw Exception('Groq GameSpec is missing required field: $field');
       }
     }
 
@@ -346,9 +419,7 @@ Do not wrap the JSON in ```json.
     }
 
     if (decodedGame['objects'] is! List) {
-      throw Exception(
-        'GameSpec field "objects" must be an array.',
-      );
+      throw Exception('GameSpec field "objects" must be an array.');
     }
 
     // ------------------------------------------------------------
@@ -358,9 +429,7 @@ Do not wrap the JSON in ```json.
     try {
       return GameSpec.fromJson(decodedGame);
     } catch (e) {
-      throw Exception(
-        'Failed to create GameSpec from Groq response: $e',
-      );
+      throw Exception('Failed to create GameSpec from Groq response: $e');
     }
   }
 }

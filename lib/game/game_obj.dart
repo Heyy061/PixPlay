@@ -1,4 +1,3 @@
-
 import 'dart:math';
 
 import 'package:flame/collisions.dart';
@@ -7,20 +6,21 @@ import 'package:flutter/material.dart';
 
 class GameObject extends PositionComponent
     with CollisionCallbacks {
+
   GameObject({
     required this.objectName,
     required this.objectType,
     required Vector2 position,
     required this.gameSize,
-    this.isEnemy = false,
+    required this.isEnemy,
+    required this.enemyVisual,
+    required this.collectibleVisual,
     this.targetPlayer,
     this.enemySpeed = 60,
     this.onCollected,
   }) : super(
           position: position,
-          size: objectType.toLowerCase().contains('goal')
-              ? Vector2.all(60)
-              : Vector2.all(40),
+          size: Vector2.all(40),
           anchor: Anchor.center,
         );
 
@@ -29,6 +29,9 @@ class GameObject extends PositionComponent
   final Vector2 gameSize;
 
   final bool isEnemy;
+  final String enemyVisual;
+  final String collectibleVisual;
+
   final PositionComponent? targetPlayer;
   final double enemySpeed;
 
@@ -40,9 +43,7 @@ class GameObject extends PositionComponent
   Future<void> onLoad() async {
     await super.onLoad();
 
-    add(
-      CircleHitbox(),
-    );
+    add(CircleHitbox());
   }
 
   // =============================== OBJECT TYPE ===============================
@@ -71,8 +72,7 @@ class GameObject extends PositionComponent
         return Colors.cyanAccent;
       }
 
-      if (_type.contains('fruit') ||
-          _type.contains('cherry')) {
+      if (_type.contains('fruit') || _type.contains('cherry')) {
         return Colors.pinkAccent;
       }
 
@@ -127,43 +127,26 @@ class GameObject extends PositionComponent
       ..color = color
       ..style = PaintingStyle.fill;
 
-    final center = Offset(
-      size.x / 2,
-      size.y / 2,
-    );
+    final center = Offset(size.x / 2, size.y / 2);
 
     // ================= COLLECTIBLE =================
 
     if (_isCollectible()) {
-      _drawCollectible(
-        canvas,
-        center,
-        paint,
-      );
-
+      _renderCollectible(canvas);
       return;
     }
 
     // ================= ENEMY =================
 
     if (_type.contains('enemy')) {
-      _drawEnemy(
-        canvas,
-        center,
-        paint,
-      );
-
+      _renderEnemy(canvas);
       return;
     }
 
     // ================= OBSTACLE =================
 
     if (_type.contains('obstacle')) {
-      _drawObstacle(
-        canvas,
-        center,
-        paint,
-      );
+      _drawObstacle(canvas, center, paint);
 
       return;
     }
@@ -173,56 +156,29 @@ class GameObject extends PositionComponent
     if (_type.contains('goal') ||
         _type.contains('portal') ||
         _type.contains('destination')) {
-      _drawGoal(
-        canvas,
-        center,
-        paint,
-      );
+      _drawGoal(canvas, center, paint);
 
       return;
     }
 
     // ================= DEFAULT =================
 
-    canvas.drawCircle(
-      center,
-      size.x / 2,
-      paint,
-    );
+    canvas.drawCircle(center, size.x / 2, paint);
   }
 
   // =============================== COLLECTIBLE ===============================
 
-  void _drawCollectible(
-    Canvas canvas,
-    Offset center,
-    Paint paint,
-  ) {
+  void _drawCollectible(Canvas canvas, Offset center, Paint paint) {
     // Diamond-shaped collectible
 
     final path = Path()
-      ..moveTo(
-        center.dx,
-        4,
-      )
-      ..lineTo(
-        size.x - 4,
-        center.dy,
-      )
-      ..lineTo(
-        center.dx,
-        size.y - 4,
-      )
-      ..lineTo(
-        4,
-        center.dy,
-      )
+      ..moveTo(center.dx, 4)
+      ..lineTo(size.x - 4, center.dy)
+      ..lineTo(center.dx, size.y - 4)
+      ..lineTo(4, center.dy)
       ..close();
 
-    canvas.drawPath(
-      path,
-      paint,
-    );
+    canvas.drawPath(path, paint);
 
     // Inner highlight
 
@@ -231,90 +187,37 @@ class GameObject extends PositionComponent
       ..style = PaintingStyle.fill;
 
     final smallPath = Path()
-      ..moveTo(
-        center.dx,
-        9,
-      )
-      ..lineTo(
-        center.dx + 7,
-        center.dy,
-      )
-      ..lineTo(
-        center.dx,
-        center.dy + 5,
-      )
-      ..lineTo(
-        center.dx - 7,
-        center.dy,
-      )
+      ..moveTo(center.dx, 9)
+      ..lineTo(center.dx + 7, center.dy)
+      ..lineTo(center.dx, center.dy + 5)
+      ..lineTo(center.dx - 7, center.dy)
       ..close();
 
-    canvas.drawPath(
-      smallPath,
-      highlight,
-    );
+    canvas.drawPath(smallPath, highlight);
   }
 
   // =============================== ENEMY ===============================
 
-  void _drawEnemy(
-    Canvas canvas,
-    Offset center,
-    Paint paint,
-  ) {
+  void _drawEnemy(Canvas canvas, Offset center, Paint paint) {
     // Main body
 
-    canvas.drawCircle(
-      center,
-      size.x / 2,
-      paint,
-    );
+    canvas.drawCircle(center, size.x / 2, paint);
 
     // Eyes
 
-    final eyePaint = Paint()
-      ..color = Colors.white;
+    final eyePaint = Paint()..color = Colors.white;
 
-    canvas.drawCircle(
-      Offset(
-        center.dx - 7,
-        center.dy - 5,
-      ),
-      5,
-      eyePaint,
-    );
+    canvas.drawCircle(Offset(center.dx - 7, center.dy - 5), 5, eyePaint);
 
-    canvas.drawCircle(
-      Offset(
-        center.dx + 7,
-        center.dy - 5,
-      ),
-      5,
-      eyePaint,
-    );
+    canvas.drawCircle(Offset(center.dx + 7, center.dy - 5), 5, eyePaint);
 
     // Pupils
 
-    final pupilPaint = Paint()
-      ..color = Colors.black;
+    final pupilPaint = Paint()..color = Colors.black;
 
-    canvas.drawCircle(
-      Offset(
-        center.dx - 7,
-        center.dy - 5,
-      ),
-      2,
-      pupilPaint,
-    );
+    canvas.drawCircle(Offset(center.dx - 7, center.dy - 5), 2, pupilPaint);
 
-    canvas.drawCircle(
-      Offset(
-        center.dx + 7,
-        center.dy - 5,
-      ),
-      2,
-      pupilPaint,
-    );
+    canvas.drawCircle(Offset(center.dx + 7, center.dy - 5), 2, pupilPaint);
 
     // Mouth
 
@@ -325,10 +228,7 @@ class GameObject extends PositionComponent
 
     canvas.drawArc(
       Rect.fromCenter(
-        center: Offset(
-          center.dx,
-          center.dy + 5,
-        ),
+        center: Offset(center.dx, center.dy + 5),
         width: 18,
         height: 10,
       ),
@@ -341,24 +241,13 @@ class GameObject extends PositionComponent
 
   // =============================== OBSTACLE ===============================
 
-  void _drawObstacle(
-    Canvas canvas,
-    Offset center,
-    Paint paint,
-  ) {
+  void _drawObstacle(Canvas canvas, Offset center, Paint paint) {
     final rect = RRect.fromRectAndRadius(
-      Rect.fromCenter(
-        center: center,
-        width: size.x,
-        height: size.y,
-      ),
+      Rect.fromCenter(center: center, width: size.x, height: size.y),
       const Radius.circular(6),
     );
 
-    canvas.drawRRect(
-      rect,
-      paint,
-    );
+    canvas.drawRRect(rect, paint);
 
     // Cross lines
 
@@ -367,40 +256,21 @@ class GameObject extends PositionComponent
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
 
-    canvas.drawLine(
-      Offset(7, 7),
-      Offset(size.x - 7, size.y - 7),
-      linePaint,
-    );
+    canvas.drawLine(Offset(7, 7), Offset(size.x - 7, size.y - 7), linePaint);
 
-    canvas.drawLine(
-      Offset(size.x - 7, 7),
-      Offset(7, size.y - 7),
-      linePaint,
-    );
+    canvas.drawLine(Offset(size.x - 7, 7), Offset(7, size.y - 7), linePaint);
   }
 
   // =============================== GOAL ===============================
 
-  void _drawGoal(
-    Canvas canvas,
-    Offset center,
-    Paint paint,
-  ) {
+  void _drawGoal(Canvas canvas, Offset center, Paint paint) {
     // Outer ring
 
     final ringPaint = Paint()
-      ..color = colorWithOpacity(
-        paint.color,
-        0.35,
-      )
+      ..color = colorWithOpacity(paint.color, 0.35)
       ..style = PaintingStyle.fill;
 
-    canvas.drawCircle(
-      center,
-      size.x / 2,
-      ringPaint,
-    );
+    canvas.drawCircle(center, size.x / 2, ringPaint);
 
     // Inner portal
 
@@ -408,29 +278,117 @@ class GameObject extends PositionComponent
       ..color = paint.color
       ..style = PaintingStyle.fill;
 
-    canvas.drawCircle(
-      center,
-      size.x / 3,
-      innerPaint,
-    );
+    canvas.drawCircle(center, size.x / 3, innerPaint);
 
     // Center
 
-    final centerPaint = Paint()
-      ..color = Colors.white.withOpacity(0.7);
+    final centerPaint = Paint()..color = Colors.white.withOpacity(0.7);
 
+    canvas.drawCircle(center, size.x / 7, centerPaint);
+  }
+
+  Color colorWithOpacity(Color color, double opacity) {
+    return color.withOpacity(opacity);
+  }
+
+  // =============================== AI VISUALS ===============================
+
+  void _renderEnemy(Canvas canvas) {
+    final visual = enemyVisual.toLowerCase();
+
+    Color bodyColor = Colors.red;
+    if (visual.contains('robot') ||
+        visual.contains('machine') ||
+        visual.contains('metal')) {
+      bodyColor = Colors.blueGrey;
+    } else if (visual.contains('monster') ||
+        visual.contains('creature')) {
+      bodyColor = Colors.deepPurple;
+    } else if (visual.contains('fire') ||
+        visual.contains('flame')) {
+      bodyColor = Colors.deepOrange;
+    } else if (visual.contains('ghost') ||
+        visual.contains('spirit')) {
+      bodyColor = Colors.white70;
+    } else if (visual.contains('alien')) {
+      bodyColor = Colors.green;
+    } else if (visual.contains('dark') ||
+        visual.contains('shadow')) {
+      bodyColor = Colors.black87;
+    }
+
+    final paint = Paint()..color = bodyColor;
+    final center = Offset(size.x / 2, size.y / 2);
+
+    canvas.drawCircle(center, size.x * 0.42, paint);
+
+    final eyePaint = Paint()..color = Colors.white;
     canvas.drawCircle(
-      center,
-      size.x / 7,
-      centerPaint,
+      Offset(size.x * 0.38, size.y * 0.42),
+      4,
+      eyePaint,
+    );
+    canvas.drawCircle(
+      Offset(size.x * 0.62, size.y * 0.42),
+      4,
+      eyePaint,
+    );
+
+    final pupilPaint = Paint()..color = Colors.black;
+    canvas.drawCircle(
+      Offset(size.x * 0.38, size.y * 0.42),
+      2,
+      pupilPaint,
+    );
+    canvas.drawCircle(
+      Offset(size.x * 0.62, size.y * 0.42),
+      2,
+      pupilPaint,
     );
   }
 
-  Color colorWithOpacity(
-    Color color,
-    double opacity,
-  ) {
-    return color.withOpacity(opacity);
+  void _renderCollectible(Canvas canvas) {
+    final visual = collectibleVisual.toLowerCase();
+
+    Color color = Colors.amber;
+
+    if (visual.contains('coin')) {
+      color = Colors.amber;
+    } else if (visual.contains('gem') ||
+        visual.contains('crystal')) {
+      color = Colors.cyanAccent;
+    } else if (visual.contains('key')) {
+      color = Colors.yellow;
+    } else if (visual.contains('fruit') ||
+        visual.contains('cherry')) {
+      color = Colors.redAccent;
+    } else if (visual.contains('rune') ||
+        visual.contains('magic')) {
+      color = Colors.purpleAccent;
+    } else if (visual.contains('energy')) {
+      color = Colors.lightBlueAccent;
+    }
+
+    final paint = Paint()..color = color;
+    final center = Offset(size.x / 2, size.y / 2);
+
+    final path = Path()
+      ..moveTo(center.dx, 2)
+      ..lineTo(size.x - 2, center.dy)
+      ..lineTo(center.dx, size.y - 2)
+      ..lineTo(2, center.dy)
+      ..close();
+
+    canvas.drawPath(path, paint);
+
+    final highlight = Paint()
+      ..color = Colors.white.withOpacity(0.65);
+
+    canvas.drawCircle(
+      Offset(size.x * 0.38, size.y * 0.32),
+      3,
+      highlight,
+    );
   }
 
   // =============================== ENEMY MOVEMENT ===============================
@@ -443,14 +401,12 @@ class GameObject extends PositionComponent
       return;
     }
 
-    final direction =
-        targetPlayer!.position - position;
+    final direction = targetPlayer!.position - position;
 
     if (direction.length > 5) {
       direction.normalize();
 
-      position +=
-          direction * enemySpeed * dt;
+      position += direction * enemySpeed * dt;
     }
 
     // Keep enemy inside screen
@@ -458,14 +414,9 @@ class GameObject extends PositionComponent
     final halfWidth = size.x / 2;
     final halfHeight = size.y / 2;
 
-    position.x = position.x.clamp(
-      halfWidth,
-      gameSize.x - halfWidth,
-    );
+    position.x = position.x.clamp(halfWidth, gameSize.x - halfWidth);
 
-    position.y = position.y.clamp(
-      halfHeight,
-      gameSize.y - halfHeight,
-    );
+    position.y = position.y.clamp(halfHeight, gameSize.y - halfHeight);
   }
 }
+
