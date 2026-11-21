@@ -132,14 +132,16 @@ class GameObject extends PositionComponent
     // ================= COLLECTIBLE =================
 
     if (_isCollectible()) {
-      _renderCollectible(canvas);
+      _drawCollectible(canvas, center, paint);
+
       return;
     }
 
     // ================= ENEMY =================
 
     if (_type.contains('enemy')) {
-      _renderEnemy(canvas);
+      _drawEnemy(canvas, center, paint);
+
       return;
     }
 
@@ -291,106 +293,6 @@ class GameObject extends PositionComponent
     return color.withOpacity(opacity);
   }
 
-  // =============================== AI VISUALS ===============================
-
-  void _renderEnemy(Canvas canvas) {
-    final visual = enemyVisual.toLowerCase();
-
-    Color bodyColor = Colors.red;
-    if (visual.contains('robot') ||
-        visual.contains('machine') ||
-        visual.contains('metal')) {
-      bodyColor = Colors.blueGrey;
-    } else if (visual.contains('monster') ||
-        visual.contains('creature')) {
-      bodyColor = Colors.deepPurple;
-    } else if (visual.contains('fire') ||
-        visual.contains('flame')) {
-      bodyColor = Colors.deepOrange;
-    } else if (visual.contains('ghost') ||
-        visual.contains('spirit')) {
-      bodyColor = Colors.white70;
-    } else if (visual.contains('alien')) {
-      bodyColor = Colors.green;
-    } else if (visual.contains('dark') ||
-        visual.contains('shadow')) {
-      bodyColor = Colors.black87;
-    }
-
-    final paint = Paint()..color = bodyColor;
-    final center = Offset(size.x / 2, size.y / 2);
-
-    canvas.drawCircle(center, size.x * 0.42, paint);
-
-    final eyePaint = Paint()..color = Colors.white;
-    canvas.drawCircle(
-      Offset(size.x * 0.38, size.y * 0.42),
-      4,
-      eyePaint,
-    );
-    canvas.drawCircle(
-      Offset(size.x * 0.62, size.y * 0.42),
-      4,
-      eyePaint,
-    );
-
-    final pupilPaint = Paint()..color = Colors.black;
-    canvas.drawCircle(
-      Offset(size.x * 0.38, size.y * 0.42),
-      2,
-      pupilPaint,
-    );
-    canvas.drawCircle(
-      Offset(size.x * 0.62, size.y * 0.42),
-      2,
-      pupilPaint,
-    );
-  }
-
-  void _renderCollectible(Canvas canvas) {
-    final visual = collectibleVisual.toLowerCase();
-
-    Color color = Colors.amber;
-
-    if (visual.contains('coin')) {
-      color = Colors.amber;
-    } else if (visual.contains('gem') ||
-        visual.contains('crystal')) {
-      color = Colors.cyanAccent;
-    } else if (visual.contains('key')) {
-      color = Colors.yellow;
-    } else if (visual.contains('fruit') ||
-        visual.contains('cherry')) {
-      color = Colors.redAccent;
-    } else if (visual.contains('rune') ||
-        visual.contains('magic')) {
-      color = Colors.purpleAccent;
-    } else if (visual.contains('energy')) {
-      color = Colors.lightBlueAccent;
-    }
-
-    final paint = Paint()..color = color;
-    final center = Offset(size.x / 2, size.y / 2);
-
-    final path = Path()
-      ..moveTo(center.dx, 2)
-      ..lineTo(size.x - 2, center.dy)
-      ..lineTo(center.dx, size.y - 2)
-      ..lineTo(2, center.dy)
-      ..close();
-
-    canvas.drawPath(path, paint);
-
-    final highlight = Paint()
-      ..color = Colors.white.withOpacity(0.65);
-
-    canvas.drawCircle(
-      Offset(size.x * 0.38, size.y * 0.32),
-      3,
-      highlight,
-    );
-  }
-
   // =============================== ENEMY MOVEMENT ===============================
 
   @override
@@ -418,5 +320,110 @@ class GameObject extends PositionComponent
 
     position.y = position.y.clamp(halfHeight, gameSize.y - halfHeight);
   }
-}
+  void _renderEnemy(Canvas canvas) {
+  final visual = enemyVisual.toLowerCase();
 
+  Color bodyColor = Colors.red;
+  bool hasEyes = true;
+
+  if (visual.contains('robot') ||
+      visual.contains('machine') ||
+      visual.contains('metal')) {
+    bodyColor = Colors.blueGrey;
+  } else if (visual.contains('monster') ||
+      visual.contains('creature')) {
+    bodyColor = Colors.deepPurple;
+  } else if (visual.contains('fire') ||
+      visual.contains('flame')) {
+    bodyColor = Colors.deepOrange;
+  } else if (visual.contains('ghost') ||
+      visual.contains('spirit')) {
+    bodyColor = Colors.white70;
+  } else if (visual.contains('alien')) {
+    bodyColor = Colors.green;
+  } else if (visual.contains('dark') ||
+      visual.contains('shadow')) {
+    bodyColor = Colors.black87;
+  }
+
+  final paint = Paint()..color = bodyColor;
+
+  canvas.drawCircle(
+    Offset(size.x / 2, size.y / 2),
+    size.x * 0.42,
+    paint,
+  );
+
+  if (hasEyes) {
+    final eyePaint = Paint()..color = Colors.white;
+
+    canvas.drawCircle(
+      Offset(size.x * 0.38, size.y * 0.42),
+      4,
+      eyePaint,
+    );
+
+    canvas.drawCircle(
+      Offset(size.x * 0.62, size.y * 0.42),
+      4,
+      eyePaint,
+    );
+
+    final pupilPaint = Paint()..color = Colors.black;
+
+    canvas.drawCircle(
+      Offset(size.x * 0.38, size.y * 0.42),
+      2,
+      pupilPaint,
+    );
+
+    canvas.drawCircle(
+      Offset(size.x * 0.62, size.y * 0.42),
+      2,
+      pupilPaint,
+    );
+  }
+}
+void _renderCollectible(Canvas canvas) {
+  final visual = collectibleVisual.toLowerCase();
+
+  Color color = Colors.amber;
+
+  if (visual.contains('coin')) {
+    color = Colors.amber;
+  } else if (visual.contains('gem') ||
+      visual.contains('crystal')) {
+    color = Colors.cyanAccent;
+  } else if (visual.contains('key')) {
+    color = Colors.yellow;
+  } else if (visual.contains('fruit') ||
+      visual.contains('cherry')) {
+    color = Colors.redAccent;
+  } else if (visual.contains('rune') ||
+      visual.contains('magic')) {
+    color = Colors.purpleAccent;
+  } else if (visual.contains('energy')) {
+    color = Colors.lightBlueAccent;
+  }
+
+  final paint = Paint()..color = color;
+
+  final path = Path()
+    ..moveTo(size.x / 2, 2)
+    ..lineTo(size.x - 2, size.y / 2)
+    ..lineTo(size.x / 2, size.y - 2)
+    ..lineTo(2, size.y / 2)
+    ..close();
+
+  canvas.drawPath(path, paint);
+
+  final highlight = Paint()
+    ..color = Colors.white.withOpacity(0.65);
+
+  canvas.drawCircle(
+    Offset(size.x * 0.38, size.y * 0.32),
+    3,
+    highlight,
+  );
+}
+}

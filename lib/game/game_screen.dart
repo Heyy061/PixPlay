@@ -1,18 +1,15 @@
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:game/game/joystick.dart';
 
 import '../models/game_spec.dart';
 import 'generated_game.dart';
 
-
 class GameScreen extends StatefulWidget {
   final GameSpec gameSpec;
 
-  const GameScreen({
-    super.key,
-    required this.gameSpec,
-  });
+  const GameScreen({super.key, required this.gameSpec});
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -24,6 +21,16 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void initState() {
     super.initState();
+
+    // Game is LANDSCAPE ONLY.
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+
+    // Hide status/navigation bars while playing.
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
     _createGame();
   }
 
@@ -45,60 +52,80 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
-  
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    body: Stack(
-      children: [
-        GameWidget(game: game),
+  void _exitGame() {
+    // Restore portrait orientation.
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
 
-        // Virtual joystick
-        if (!game.gameWon && !game.gameOver)
+    // Restore system UI.
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
+    Navigator.pop(context);
+  }
+
+  @override
+  void dispose() {
+    // Safety: restore portrait if this screen is removed.
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          GameWidget(game: game, autofocus: true),
+
+          // Virtual joystick
+          if (!game.gameWon && !game.gameOver)
+            Positioned(
+              left: 25,
+              bottom: 25,
+              child: VirtualJoystick(
+                onDirectionChanged: (direction) {
+                  game.setJoystickDirection(direction);
+                },
+              ),
+            ),
+
+          // Back button
           Positioned(
-            left: 25,
-            bottom: 25,
-            child: VirtualJoystick(
-              onDirectionChanged: (direction) {
-                game.setJoystickDirection(direction);
-              },
+            top: 20,
+            left: 16,
+            child: IconButton(
+              onPressed: _exitGame,
+              icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30),
             ),
           ),
 
-        Positioned(
-          top: 40,
-          left: 16,
-          child: IconButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            icon: const Icon(
-              Icons.arrow_back,
-              color: Colors.white,
-              size: 30,
+          // Win overlay
+          if (game.gameWon)
+            _buildResultOverlay(
+              title: 'YOU WIN!',
+              subtitle: 'Congratulations 🎉',
+              isWin: true,
             ),
-          ),
-        ),
 
-        // Win overlay
-        if (game.gameWon)
-          _buildResultOverlay(
-            title: 'YOU WIN!',
-            subtitle: 'Congratulations 🎉',
-            isWin: true,
-          ),
-
-        // Game over overlay
-        if (game.gameOver)
-          _buildResultOverlay(
-            title: 'GAME OVER',
-            subtitle: 'Better luck next time!',
-            isWin: false,
-          ),
-      ],
-    ),
-  );
-}
+          // Game over overlay
+          if (game.gameOver)
+            _buildResultOverlay(
+              title: 'GAME OVER',
+              subtitle: 'Better luck next time!',
+              isWin: false,
+            ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildResultOverlay({
     required String title,
@@ -131,20 +158,14 @@ Widget build(BuildContext context) {
 
               Text(
                 subtitle,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                ),
+                style: const TextStyle(color: Colors.white, fontSize: 18),
               ),
 
               const SizedBox(height: 25),
 
               Text(
                 'Score: ${game.score}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                ),
+                style: const TextStyle(color: Colors.white, fontSize: 20),
               ),
 
               const SizedBox(height: 25),

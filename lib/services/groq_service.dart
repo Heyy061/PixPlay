@@ -63,6 +63,9 @@ RULES:
 2. Use the visible environment, objects, colors,
    and atmosphere to inspire the game.
 3. Match the gameplay to the selected genre.
+3a. Describe the actual scene composition, ground type,
+    background elements, and lighting visible in the image.
+3b. Do not substitute a generic environment for the photographed scene.
 4. If the user provided a description, use it as
    the main gameplay direction.
 5. If no description is provided, invent suitable gameplay.
@@ -126,6 +129,10 @@ difficulty
 visual_theme
 color_palette
 environment_style
+environment_description
+background_elements
+ground_type
+lighting
 player_visual
 enemy_visual
 collectible_visual
@@ -147,7 +154,27 @@ Describe the main visual identity of the uploaded image.
 Describe the dominant colors actually visible in the uploaded image.
 
 "environment_style":
-Describe a simple game environment inspired by the uploaded image.
+Describe the broad environment category visible in the uploaded image.
+
+"environment_description":
+Describe the ACTUAL physical composition of the uploaded image in detail.
+Mention the foreground, ground/floor, walls, buildings, mountains,
+trees, sky, major structures, perspective, and other visually important
+elements that are actually visible.
+
+"background_elements":
+Return an array of the most important visible background/environment
+elements from the uploaded image. Do not invent unrelated elements.
+
+"ground_type":
+Describe the actual surface the player should move on, such as
+"concrete rooftop", "cobblestone street", "grass trail", "sand",
+"snow", or "wooden floor".
+
+"lighting":
+Describe the actual lighting/time-of-day visible in the image,
+such as "warm sunset", "bright daylight", "overcast", "night",
+or "misty morning".
 
 "player_visual":
 Describe how the player should visually look based on the uploaded image.
@@ -159,6 +186,24 @@ Describe an enemy that fits the visual style of the uploaded image.
 Describe collectible objects inspired by recognizable objects in the uploaded image.
 
 IMPORTANT:
+
+The uploaded image is the PRIMARY source for the environment.
+The game environment must preserve the physical composition of the image,
+even when simplifying it into 2D.
+
+Do NOT replace the scene with a generic environment just because a
+broad category is present.
+
+Example:
+If the image shows an open concrete rooftop at sunset with low boundary
+walls and distant trees, describe and render a rooftop scene.
+Do NOT turn it into a generic city street or a skyline-dominated city
+environment merely because buildings may appear in the distance.
+
+If the image shows a cobblestone street, preserve the street surface,
+street-level perspective, nearby buildings, and visible objects.
+If the image shows a mountain trail, preserve the trail/ground,
+mountains, vegetation, and atmospheric perspective.
 
 Do NOT invent unrelated visual themes.
 
@@ -376,6 +421,10 @@ Return JSON only.
   'visual_theme',
   'color_palette',
   'environment_style',
+  'environment_description',
+  'background_elements',
+  'ground_type',
+  'lighting',
   'player_visual',
   'enemy_visual',
   'collectible_visual',
